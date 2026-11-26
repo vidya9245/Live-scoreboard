@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Scoreboard — Universal Score &amp; Statistics Manager</title>
+  <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div>
+          <h1 class="brand-title">Live Scoreboard</h1>
+          <p class="brand-subtitle">Universal Category &amp; Online Median System</p>
+        </div>
+      </div>
+
+      <nav id="main-nav-tabs" class="nav-tabs" role="tablist" aria-label="Workspace Sections" hidden>
+        <button type="button" class="nav-tab is-active" role="tab" id="tab-dashboard" aria-selected="true" aria-controls="panel-dashboard">
+          Dashboard
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-categories" aria-selected="false" aria-controls="panel-categories">
+          Categories
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-scoreboard" aria-selected="false" aria-controls="panel-scoreboard">
+          Scoreboard
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-history" aria-selected="false" aria-controls="panel-history">
+          History
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-completed" aria-selected="false" aria-controls="panel-completed">
+          Completed
+        </button>
+      </nav>
+
+      <div id="topbar-user-area" class="topbar-status" hidden>
+        <div class="status-pill" aria-live="polite" title="Active scoreboard summary">
+          <span id="pill-board-name" class="pill-board">No board</span>
+          <span class="pill-divider" aria-hidden="true">|</span>
+          <span class="pill-label">Median</span>
+          <strong id="pill-median" class="tabular pill-median">—</strong>
+        </div>
+        <span id="autosave-indicator" class="autosave-pill" aria-live="polite">Saved</span>
+        <span id="user-pill" class="user-pill" hidden></span>
+        <button type="button" id="btn-logout" class="btn btn-ghost btn-sm" hidden>Log Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== AUTH SCREEN (SIGN UP / LOG IN) ==================== -->
+  <section id="auth-screen" class="auth-screen" hidden>
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Welcome to Live Scoreboard</h2>
+        <p class="card-desc">Sign in or create an account to save your private categories, scoreboards, and scores.</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist" aria-label="Authentication Mode">
+        <button type="button" id="auth-tab-login" class="auth-tab is-active" role="tab" aria-selected="true">Log In</button>
+        <button type="button" id="auth-tab-signup" class="auth-tab" role="tab" aria-selected="false">Sign Up</button>
+      </div>
+
+      <form id="login-form" class="auth-form" novalidate>
+        <div class="field-group">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" autocomplete="username" placeholder="Enter your username" required />
+        </div>
+        <div class="field-group">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+        </div>
+        <p id="login-feedback" class="feedback-msg" aria-live="polite"></p>
+        <button type="submit" id="btn-login-submit" class="btn btn-primary auth-submit-btn">Log In</button>
+      </form>
+
+      <form id="signup-form" class="auth-form" hidden novalidate>
+        <div class="field-group">
+          <label for="signup-display-name">Display Name <span class="optional-tag">(optional)</span></label>
+          <input id="signup-display-name" type="text" maxlength="40" autocomplete="name" placeholder="e.g. Vidya" />
+        </div>
+        <div class="field-group">
+          <label for="signup-username">Username</label>
+          <input id="signup-username" type="text" maxlength="40" autocomplete="username" placeholder="3–40 characters" required />
+        </div>
+        <div class="field-group">
+          <label for="signup-password">Password</label>
+          <input id="signup-password" type="password" autocomplete="new-password" placeholder="Minimum 6 characters" required />
+        </div>
+        <div class="field-group">
+          <label for="signup-confirm">Confirm Password</label>
+          <input id="signup-confirm" type="password" autocomplete="new-password" placeholder="Re-enter password" required />
+        </div>
+        <p id="signup-feedback" class="feedback-msg" aria-live="polite"></p>
+        <button type="submit" id="btn-signup-submit" class="btn btn-primary auth-submit-btn">Create Account</button>
+      </form>
+    </div>
+  </section>
+
+  <main id="app-main" class="container" hidden>
+    <!-- ==================== 1. DASHBOARD ==================== -->
+    <section id="panel-dashboard" class="tab-panel" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="section-hero">
+        <div>
+          <h2>Workspace Overview</h2>
+          <p class="card-desc">Organize scoreboards under custom categories with independent storage and live running-median statistics.</p>
+        </div>
+        <div class="hero-actions">
+          <button type="button" id="btn-dash-new-category" class="btn btn-secondary">+ New Category</button>
+          <button type="button" id="btn-dash-new-board" class="btn btn-primary">+ New Scoreboard</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <article class="kpi-card">
+          <span class="kpi-label">Categories</span>
+          <strong id="dash-kpi-categories" class="kpi-value tabular">0</strong>
+          <span class="kpi-sub">Custom &amp; separate records</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">Total Scoreboards</span>
+          <strong id="dash-kpi-boards" class="kpi-value tabular">0</strong>
+          <span id="dash-kpi-boards-sub" class="kpi-sub">0 ongoing &bull; 0 completed</span>
+        </article>
+        <article class="kpi-card kpi-card--median">
+          <span class="kpi-label">Ongoing Scoreboards</span>
+          <strong id="dash-kpi-ongoing" class="kpi-value tabular">0</strong>
+          <span class="kpi-sub">Active &amp; editable</span>
+        </article>
+        <article class="kpi-card">
+          <span class="kpi-label">Total Scores Recorded</span>
+          <strong id="dash-kpi-scores" class="kpi-value tabular">0</strong>
+          <span class="kpi-sub">Auto-saved across all boards</span>
+        </article>
+      </div>
+
+      <div class="dashboard-grid">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2>Categories</h2>
+              <p class="card-desc">Click a category to view or add scoreboards</p>
+            </div>
+            <button type="button" id="btn-dash-manage-cats" class="btn btn-ghost btn-sm">Manage &rarr;</button>
+          </div>
+          <div id="dash-categories-list" class="dash-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2>Recently Updated Scoreboards</h2>
+              <p class="card-desc">Click any scoreboard to restore its exact state</p>
+            </div>
+            <button type="button" id="btn-dash-view-history" class="btn btn-ghost btn-sm">All History &rarr;</button>
+          </div>
+          <div id="dash-recent-boards" class="dash-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ==================== 2. CATEGORIES ==================== -->
+    <section id="panel-categories" class="tab-panel" role="tabpanel" aria-labelledby="tab-categories" hidden>
+      <section class="card">
+        <div class="card-header card-header--wrap">
+          <div>
+            <h2>Create Custom Category</h2>
+            <p class="card-desc">Name a category anything you want (e.g., Sports, Studies, Competitions, Fitness, Gaming).</p>
+          </div>
+        </div>
+        <form id="create-category-form" class="category-create-form" novalidate>
+          <div class="field-group">
+            <label for="new-category-name" class="sr-only">Category Name</label>
+            <input id="new-category-name" type="text" maxlength="40" placeholder="Category name (e.g. Sports, Studies, Competitions)" required />
+          </div>
+          <div class="field-group">
+            <label for="new-category-desc" class="sr-only">Description (optional)</label>
+            <input id="new-category-desc" type="text" maxlength="80" placeholder="Optional description (e.g. Match & tournament scores)" />
+          </div>
+          <button type="submit" class="btn btn-primary">Create Category</button>
+        </form>
+        <p id="category-feedback" class="feedback-msg" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Your Categories</h2>
+            <p id="categories-count-sub" class="card-desc">0 categories created</p>
+          </div>
+        </div>
+        <div id="categories-grid" class="cards-grid"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 3. SCOREBOARD ==================== -->
+    <section id="panel-scoreboard" class="tab-panel" role="tabpanel" aria-labelledby="tab-scoreboard" hidden>
+      <!-- Empty state when no scoreboard is created/selected -->
+      <section id="scoreboard-empty-state" class="card empty-state-card" hidden>
+        <h2>No Active Scoreboard Selected</h2>
+        <p class="card-desc">Create a category and scoreboard (or restore one from History) to start recording scores and tracking the live running median.</p>
+        <div class="hero-actions">
+          <button type="button" id="btn-empty-create-board" class="btn btn-primary">+ Create Scoreboard</button>
+          <button type="button" id="btn-empty-open-history" class="btn btn-secondary">Browse History</button>
+        </div>
+      </section>
+
+      <div id="scoreboard-active-view">
+        <div class="active-board-bar">
+          <div class="active-board-info">
+            <span id="active-category-badge" class="category-badge">Category</span>
+            <div>
+              <div class="title-status-row">
+                <h2 id="active-board-title" class="active-board-title">Scoreboard</h2>
+                <span id="active-status-badge" class="status-badge status-badge--ongoing">Ongoing</span>
+              </div>
+              <p id="active-board-meta" class="active-board-meta"></p>
+            </div>
+          </div>
+          <div class="active-board-actions">
+            <label for="active-board-select" class="sr-only">Switch scoreboard</label>
+            <select id="active-board-select" class="board-select"></select>
+            <button type="button" id="btn-new-board-top" class="btn btn-outline btn-sm">+ New</button>
+            <button type="button" id="btn-edit-active-board" class="btn btn-secondary btn-sm">Customize</button>
+            <button type="button" id="btn-complete-board" class="btn btn-success btn-sm">Complete</button>
+            <button type="button" id="btn-unlock-board" class="btn btn-warning btn-sm" hidden>Unlock</button>
+            <button type="button" id="btn-reset-board" class="btn btn-ghost btn-sm">Reset</button>
+          </div>
+        </div>
+
+        <div id="locked-banner" class="locked-banner" hidden>
+          <span><strong>Completed &amp; Locked:</strong> This scoreboard is finalized in read-only mode to prevent accidental edits.</span>
+          <button type="button" id="btn-banner-unlock" class="btn btn-warning btn-sm">Unlock to Edit</button>
+        </div>
+
+        <div class="kpi-grid">
+          <article class="kpi-card kpi-card--median">
+            <span class="kpi-label">Current Median</span>
+            <strong id="kpi-median" class="kpi-value tabular">—</strong>
+            <span id="kpi-median-note" class="kpi-sub">Waiting for scores</span>
+          </article>
+          <article class="kpi-card">
+            <span class="kpi-label">Total Scores</span>
+            <strong id="kpi-count" class="kpi-value tabular">0</strong>
+            <div class="progress-track" aria-hidden="true">
+              <div id="kpi-capacity-bar" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <span id="kpi-capacity-text" class="kpi-sub tabular">0 / 100,000 limit</span>
+          </article>
+          <article class="kpi-card">
+            <span class="kpi-label">Latest Score</span>
+            <strong id="kpi-latest" class="kpi-value tabular">—</strong>
+            <span id="kpi-latest-step" class="kpi-sub">No entries yet</span>
+          </article>
+          <article class="kpi-card">
+            <span class="kpi-label">Mean (for comparison)</span>
+            <strong id="kpi-mean" class="kpi-value tabular">—</strong>
+            <span id="kpi-mean-note" class="kpi-sub">Outliers skew mean, not median</span>
+          </article>
+        </div>
+
+        <div class="workspace-grid">
+          <!-- Left: Score Entry, Custom Fields/Participants, Replay -->
+          <div class="stack-col">
+            <section class="card" id="score-entry-card">
+              <div class="card-header">
+                <h2>Add Score Entry</h2>
+                <span class="badge">32-bit signed int</span>
+              </div>
+
+              <form id="manual-score-form" class="entry-form" novalidate>
+                <div id="participant-entry-wrap" class="field-group" hidden>
+                  <label for="entry-participant">Participant / Team</label>
+                  <div class="participant-input-row">
+                    <input id="entry-participant" list="participants-datalist" type="text" maxlength="40" placeholder="Select or type participant / team" />
+                    <datalist id="participants-datalist"></datalist>
+                  </div>
+                </div>
+
+                <div id="custom-fields-inputs" class="custom-fields-grid"></div>
+
+                <div class="score-form">
+                  <div class="field-group">
+                    <label for="score-input" id="score-input-label">Score</label>
+                    <input
+                      id="score-input"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      placeholder="e.g. 5, -42, 2147483647"
+                    />
+                  </div>
+                  <button type="submit" id="btn-add-score" class="btn btn-primary align-end">Add Score</button>
+                </div>
+              </form>
+              <p id="input-feedback" class="feedback-msg" aria-live="polite"></p>
+            </section>
+
+            <section class="card" id="participants-card" hidden>
+              <div class="card-header card-header--wrap">
+                <div>
+                  <h2>Participants / Teams Summary</h2>
+                  <p class="card-desc">Independent breakdown for this scoreboard</p>
+                </div>
+                <form id="quick-add-participant-form" class="inline-form">
+                  <input id="quick-participant-name" type="text" maxlength="40" placeholder="Add participant..." aria-label="Add participant or team" />
+                  <button type="submit" id="btn-quick-add-participant" class="btn btn-secondary btn-sm">Add</button>
+                </form>
+              </div>
+              <div class="table-scroll">
+                <table class="data-table">
+                  <thead id="participants-table-head"></thead>
+                  <tbody id="participants-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card" id="replay-card">
+              <div class="card-header">
+                <h2>Replay File &amp; Playback</h2>
+                <span id="queue-badge" class="badge tabular">Queue: 0</span>
+              </div>
+
+              <label class="file-dropzone" for="replay-file-input">
+                <input id="replay-file-input" type="file" accept=".txt,.csv,text/plain,text/csv" />
+                <span class="dropzone-title">Choose or drop a <code>.txt</code> / <code>.csv</code> score file</span>
+                <span class="dropzone-hint">Supports newline, space, or comma-separated signed 32-bit integers</span>
+              </label>
+              <p id="file-feedback" class="feedback-msg" aria-live="polite"></p>
+
+              <div class="playback-bar">
+                <button type="button" id="btn-step" class="btn btn-secondary" disabled>Step +1</button>
+                <button type="button" id="btn-play" class="btn btn-primary" disabled>Play</button>
+                <button type="button" id="btn-instant" class="btn btn-secondary" disabled>Instant Replay</button>
+              </div>
+
+              <div class="speed-row">
+                <label for="speed-slider">Playback speed: <strong id="speed-label" class="tabular">10 scores/sec</strong></label>
+                <input id="speed-slider" type="range" min="1" max="100" value="10" />
+              </div>
+            </section>
+          </div>
+
+          <!-- Right: Mini Trend & All Entered Scores -->
+          <div class="stack-col">
+            <section class="card">
+              <div class="card-header">
+                <h2>Running Median Trend</h2>
+                <button type="button" id="btn-toggle-analytics" class="btn btn-ghost btn-sm">Full Chart &amp; Log &darr;</button>
+              </div>
+              <div class="canvas-wrap canvas-wrap--sm">
+                <canvas id="mini-trend-canvas" aria-label="Recent running median trend chart"></canvas>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header card-header--wrap">
+                <div>
+                  <h2>All Entered Scores</h2>
+                </div>
+                <div class="scores-list-controls">
+                  <select id="scores-order-select" class="select-sm" aria-label="Score list order">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Insertion Order</option>
+                  </select>
+                  <span id="all-scores-badge" class="badge tabular">0 total</span>
+                </div>
+              </div>
+              <div id="recent-list-wrap" class="recent-list-wrap">
+                <div id="recent-list-spacer" class="recent-list-spacer">
+                  <ul id="recent-updates-list" class="recent-list">
+                    <li class="empty-row">No scores inserted yet.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Full Step-by-Step Median Chart & Log for Active Scoreboard -->
+        <section id="board-analytics-section" class="analytics-section">
+          <section class="card">
+            <div class="card-header card-header--wrap">
+              <div>
+                <h2>Scores vs. Running Median</h2>
+                <p class="card-desc">Canvas-rendered view (automatically downsampled above 1,500 points for smooth 100k display)</p>
+              </div>
+              <div class="chart-controls">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="toggle-show-scores" checked />
+                  Show Raw Scores
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="toggle-show-mean" />
+                  Overlay Mean
+                </label>
+                <select id="chart-window-select" aria-label="Chart window">
+                  <option value="all">Full Stream</option>
+                  <option value="last200">Last 200 Steps</option>
+                  <option value="first200">First 200 Steps</option>
+                </select>
+              </div>
+            </div>
+            <div class="canvas-wrap canvas-wrap--lg">
+              <canvas id="main-trend-canvas" aria-label="Scores and running median chart"></canvas>
+            </div>
+            <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header card-header--wrap">
+              <div>
+                <h2>Step-by-Step Median Log</h2>
+                <p id="history-summary" class="card-desc tabular">0 total entries</p>
+              </div>
+              <div class="table-toolbar">
+                <input id="history-jump-input" type="number" min="1" placeholder="Jump to step #" aria-label="Jump to step number" />
+                <button type="button" id="btn-jump-step" class="btn btn-secondary btn-sm">Go</button>
+                <select id="history-filter-select" aria-label="Filter history rows">
+                  <option value="all">All Steps</option>
+                  <option value="odd">Odd Count Only</option>
+                  <option value="even">Even Count Only</option>
+                  <option value="negative">Negative Scores Only</option>
+                </select>
+                <button type="button" id="btn-export-csv" class="btn btn-outline btn-sm" disabled>Export CSV</button>
+              </div>
+            </div>
+
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Step #</th>
+                    <th>Details</th>
+                    <th>Inserted Score</th>
+                    <th>Total Count</th>
+                    <th>Lower Top</th>
+                    <th>Upper Top</th>
+                    <th>Running Median</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body">
+                  <tr>
+                    <td colspan="7" class="empty-cell">No median history recorded yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination-bar">
+              <span id="pagination-info" class="tabular">Page 1 of 1</span>
+              <div class="pagination-actions">
+                <button type="button" id="btn-page-first" class="btn btn-ghost btn-sm" disabled>&laquo; First</button>
+                <button type="button" id="btn-page-prev" class="btn btn-ghost btn-sm" disabled>&lsaquo; Prev</button>
+                <button type="button" id="btn-page-next" class="btn btn-ghost btn-sm" disabled>Next &rsaquo;</button>
+                <button type="button" id="btn-page-last" class="btn btn-ghost btn-sm" disabled>Last &raquo;</button>
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <!-- ==================== 4. HISTORY (SAVED SCOREBOARDS) ==================== -->
+    <section id="panel-history" class="tab-panel" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <section class="card">
+        <div class="card-header card-header--wrap">
+          <div>
+            <h2>Saved Scoreboards History</h2>
+            <p class="card-desc">All previously created scoreboards organized by category. Click any scoreboard to restore its exact state.</p>
+          </div>
+          <button type="button" id="btn-history-new-board" class="btn btn-primary">+ New Scoreboard</button>
+        </div>
+
+        <div class="manager-toolbar">
+          <div class="filter-controls-row">
+            <select id="history-category-filter" aria-label="Filter by category">
+              <option value="all">All Categories</option>
+            </select>
+            <select id="history-status-filter" aria-label="Filter by status">
+              <option value="all">All Statuses</option>
+              <option value="ongoing">Ongoing Only</option>
+              <option value="completed">Completed Only</option>
+            </select>
+          </div>
+          <div class="manager-search-wrap">
+            <label for="history-search-input" class="sr-only">Search saved scoreboards</label>
+            <input id="history-search-input" type="text" placeholder="Search by name, category, or participant..." />
+          </div>
+        </div>
+
+        <div id="saved-history-container" class="history-groups"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 5. COMPLETED ==================== -->
+    <section id="panel-completed" class="tab-panel" role="tabpanel" aria-labelledby="tab-completed" hidden>
+      <section class="card">
+        <div class="card-header card-header--wrap">
+          <div>
+            <h2>Completed &amp; Locked Scoreboards</h2>
+            <p class="card-desc">Finalized records protected against accidental edits. You can view, export, unlock (with confirmation), or delete them.</p>
+          </div>
+          <div class="filter-controls-row">
+            <select id="completed-category-filter" aria-label="Filter completed by category">
+              <option value="all">All Categories</option>
+            </select>
+            <input id="completed-search-input" type="text" placeholder="Search completed..." aria-label="Search completed scoreboards" />
+          </div>
+        </div>
+
+        <div id="completed-boards-grid" class="cards-grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- ==================== CREATE / CUSTOMIZE SCOREBOARD MODAL ==================== -->
+  <dialog id="scoreboard-modal" class="modal-dialog" aria-labelledby="sb-modal-title">
+    <form id="scoreboard-modal-form" method="dialog" novalidate>
+      <div class="modal-header">
+        <h2 id="sb-modal-title">Create New Scoreboard</h2>
+        <button type="button" id="btn-close-sb-modal" class="btn btn-ghost btn-sm" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field-group">
+          <label for="sb-name">Scoreboard Name</label>
+          <input id="sb-name" type="text" maxlength="60" placeholder="e.g. Cricket Match 1, Mathematics Internal Test, Java Quiz" required />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label for="sb-category">Category</label>
+            <select id="sb-category"></select>
+          </div>
+
+          <div class="field-group" id="sb-inline-cat-wrap" hidden>
+            <label for="sb-inline-cat-name">New Category Name</label>
+            <input id="sb-inline-cat-name" type="text" maxlength="40" placeholder="e.g. Sports, Studies, Gaming" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label for="sb-format">Scoring Format</label>
+            <select id="sb-format">
+              <option value="universal">Universal Score Log (Numeric + Optional Fields)</option>
+              <option value="participants">Participants / Teams Sheet</option>
+              <option value="exam">Exam / Test / Quiz Marks</option>
+              <option value="match">Match / Event Rounds</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="sb-unit">Score Unit <span class="optional-tag">(optional)</span></label>
+            <input id="sb-unit" type="text" maxlength="16" placeholder="e.g. runs, marks, pts, %" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="sb-participants-input">Participants / Teams <span class="optional-tag">(comma-separated, optional)</span></label>
+          <input id="sb-participants-input" type="text" placeholder="e.g. Team A, Team B or Alice, Bob, Charlie" />
+        </div>
+
+        <div class="field-group">
+          <label for="sb-columns-input">Custom Columns <span class="optional-tag">(comma-separated, optional)</span></label>
+          <input id="sb-columns-input" type="text" placeholder="e.g. Round, Overs, Roll No, Remarks" />
+          <div class="topic-chips" id="sb-column-suggestions">
+            <button type="button" class="topic-chip" data-cols="Overs, Wickets">Sports: Overs, Wickets</button>
+            <button type="button" class="topic-chip" data-cols="Roll No, Max Marks">Studies: Roll No, Max Marks</button>
+            <button type="button" class="topic-chip" data-cols="Round, Judge Note">Competition: Round, Judge Note</button>
+          </div>
+        </div>
+
+        <p id="sb-modal-feedback" class="feedback-msg" aria-live="polite"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btn-cancel-sb-modal" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Scoreboard</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ==================== RENAME CATEGORY MODAL ==================== -->
+  <dialog id="category-modal" class="modal-dialog" aria-labelledby="cat-modal-title">
+    <form id="category-modal-form" method="dialog" novalidate>
+      <div class="modal-header">
+        <h2 id="cat-modal-title">Rename Category</h2>
+        <button type="button" id="btn-close-cat-modal" class="btn btn-ghost btn-sm" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label for="cat-modal-name">Category Name</label>
+          <input id="cat-modal-name" type="text" maxlength="40" required />
+        </div>
+        <div class="field-group">
+          <label for="cat-modal-desc">Description <span class="optional-tag">(optional)</span></label>
+          <input id="cat-modal-desc" type="text" maxlength="80" />
+        </div>
+        <p id="cat-modal-feedback" class="feedback-msg" aria-live="polite"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-cancel-cat-modal" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Category</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ==================== CONFIRMATION MODAL ==================== -->
+  <dialog id="confirm-modal" class="modal-dialog modal-dialog--sm" aria-labelledby="confirm-title">
+    <div class="modal-header">
+      <h2 id="confirm-title">Confirm Action</h2>
+      <button type="button" id="btn-close-confirm" class="btn btn-ghost btn-sm" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" class="confirm-text"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+      <button type="button" id="btn-confirm-ok" class="btn btn-primary">Confirm</button>
+    </div>
+  </dialog>
+
+  <script defer src="js/medianEngine.js?v=3"></script>
+  <script defer src="js/charts.js?v=3"></script>
+  <script defer src="js/storage.js?v=3"></script>
+  <script defer src="js/app.js?v=3"></script>
+</body>
+</html>

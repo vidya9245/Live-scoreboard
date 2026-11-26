@@ -1,0 +1,14 @@
+# Local SQLite database (contains local user accounts, session tokens, and saved scoreboards)
+scoreboard.db
+*.db
+*.db-journal
+*.db-wal
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
